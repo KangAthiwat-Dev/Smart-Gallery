@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Best Shot
 
-## Getting Started
+Best Shot is a mobile-application prototype for reviewing a photo library. It
+demonstrates photo-quality scores, similar-photo grouping, best-shot selection,
+and safe cleanup recommendations without deleting any files automatically.
 
-First, run the development server:
+The current version is frontend-only. Analysis results come from deterministic
+mock data so the interface and user flow can be evaluated before a real image
+processing backend is connected.
+
+## Prototype flow
+
+1. Select or drag multiple images onto the upload area.
+2. Review the selected files locally in the browser.
+3. Open the sample analysis to explore the gallery, similarity groups, photo
+   details, and summary.
+
+Selected files are used only for local previews. They are not uploaded, and the
+sample analysis does not inspect their contents yet.
+
+## Features
+
+- Multiple-image selection with drag-and-drop support
+- Local image previews and file-size summaries
+- Gallery filtering by keep, review, and delete recommendation
+- Similar-photo groups with a highlighted best shot
+- Per-photo quality, sharpness, and exposure scores
+- Estimated storage savings and a non-destructive cleanup summary
+- Responsive layouts suitable for demonstrating a mobile app concept
+
+## Tech stack
+
+- Next.js 16 App Router
+- React 19 and TypeScript
+- Tailwind CSS 4
+- Base UI and shadcn UI primitives
+- Lucide icons
+
+## Getting started
+
+Install dependencies and start the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Quality checks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run check
+npm run build
+```
 
-## Learn More
+`npm run check` runs ESLint with zero warnings allowed and performs a full
+TypeScript check.
 
-To learn more about Next.js, take a look at the following resources:
+## Project structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```text
+app/                  Routes, layouts, metadata, and global styles
+components/           Application components
+components/ui/        Generated reusable UI primitives
+components/upload/    Photo-selection experience
+data/                 Deterministic mock analysis data
+lib/                  Shared utilities
+types/                Analysis domain types
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Mock data and backend integration
 
-## Deploy on Vercel
+Mock results live in `data/mock-data.ts` and follow the contracts in
+`types/analysis.ts`. When a backend is introduced, replace those imports with a
+data-access layer while keeping the page and component interfaces stable.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+A production implementation should validate uploaded file types and sizes on
+the server, run the image-analysis pipeline outside the browser, persist an
+analysis session, and require explicit user confirmation before deleting any
+photo.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Current limitations
+
+- No backend, authentication, persistence, or real image analysis
+- Selected images and mock analysis results are not linked
+- Remote sample images require an internet connection
+- Recommendations are illustrative and must not be treated as deletion actions
