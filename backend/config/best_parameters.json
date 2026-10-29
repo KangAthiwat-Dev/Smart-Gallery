@@ -14,8 +14,8 @@
   "similarity": {
     "strategy": "exif_time_or_phash",
     "missing_exif_policy": "phash",
-    "phash_threshold": 22,
-    "timed_phash_threshold": 27,
+    "phash_threshold": 21,
+    "timed_phash_threshold": 25,
     "exif_time_window_seconds": 30,
     "linkage": "complete",
     "development_group_f1": 0.9285714285714286
