@@ -1,0 +1,40 @@
+{
+  "sharpness": {
+    "method": "laplacian_score",
+    "threshold": 574.4107330939421,
+    "development_macro_f1": 0.808792965627498
+  },
+  "exposure": {
+    "low_brightness": 80.0,
+    "high_brightness": 145.0,
+    "dark_clip_threshold": 0.15,
+    "highlight_clip_threshold": 0.03,
+    "development_macro_f1": 0.7698745773279935
+  },
+  "similarity": {
+    "strategy": "exif_time_or_phash",
+    "missing_exif_policy": "phash",
+    "phash_threshold": 22,
+    "timed_phash_threshold": 27,
+    "exif_time_window_seconds": 30,
+    "linkage": "complete",
+    "development_group_f1": 0.9285714285714286
+  },
+  "quality_score": {
+    "sharpness_weight": 0.6,
+    "exposure_weight": 0.4,
+    "status": "provisional_weights_not_tuned"
+  },
+  "recommendation": {
+    "duplicate_quality_gap": 7,
+    "status": "provisional_rule_based",
+    "best_shot_tie_margin": 0.5
+  },
+  "selection": {
+    "source": "development",
+    "labels_sha256": "595ab2dfbc7fe26284e5fa90b7bedc77444b1d40f466067aef8842592dfbd1a3",
+    "similarity_policy": "strict_exif_no_fallback",
+    "note": "Pipeline selected for development evaluation: pHash 29, EXIF 30s, Average-Link, Singleton Rescue and Group-to-Group Merge. Development Group F1 92.86%; previously inspected Final Test is not untouched holdout.",
+    "final_test_previously_inspected": true
+  }
+}

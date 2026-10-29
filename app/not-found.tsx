@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ImageOff } from "lucide-react";
+import { ArrowLeft, ImageOff } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 
@@ -10,13 +10,24 @@ export default function NotFound() {
         <ImageOff className="size-6 text-muted-foreground" />
       </div>
 
-      <h1 className="text-2xl font-semibold tracking-tight">Photo not found</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">
+        ไม่พบหน้าที่ต้องการ
+      </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        This photo is not included in the current sample analysis.
+        หน้านี้ไม่พร้อมใช้งาน คุณสามารถกลับไปดูผลวิเคราะห์ในคลังรูปได้
       </p>
 
-      <Link href="/gallery" className={buttonVariants({ className: "mt-6" })}>
-        Back to Gallery
+      <Link
+        href="/gallery"
+        aria-label="กลับไปคลังรูป"
+        title="กลับไปคลังรูป"
+        className={buttonVariants({
+          variant: "outline",
+          size: "icon",
+          className: "mt-6 size-11 rounded-full",
+        })}
+      >
+        <ArrowLeft aria-hidden="true" />
       </Link>
     </div>
   );

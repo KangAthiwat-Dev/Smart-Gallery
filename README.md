@@ -1,88 +1,311 @@
-# Best Shot
+# Smart Gallery / Best Shot
 
-Best Shot is a mobile-application prototype for reviewing a photo library. It
-demonstrates photo-quality scores, similar-photo grouping, best-shot selection,
-and safe cleanup recommendations without deleting any files automatically.
+Mobile-focused photo cleanup demo with a Next.js frontend and a FastAPI image
+processing service. Select real images or a folder, analyze their quality and
+similarity, and review best-shot recommendations across all screens.
 
-The current version is frontend-only. Analysis results come from deterministic
-mock data so the interface and user flow can be evaluated before a real image
-processing backend is connected.
+The app recommends actions; it never deletes or modifies original photos.
 
-## Prototype flow
+## Run locally
 
-1. Select or drag multiple images onto the upload area.
-2. Review the selected files locally in the browser.
-3. Open the sample analysis to explore the gallery, similarity groups, photo
-   details, and summary.
+Use Node.js 20.9+ and Python 3.12 or 3.13. Open two terminals.
 
-Selected files are used only for local previews. They are not uploaded, and the
-sample analysis does not inspect their contents yet.
-
-## Features
-
-- Multiple-image selection with drag-and-drop support
-- Local image previews and file-size summaries
-- Gallery filtering by keep, review, and delete recommendation
-- Similar-photo groups with a highlighted best shot
-- Per-photo quality, sharpness, and exposure scores
-- Estimated storage savings and a non-destructive cleanup summary
-- Responsive layouts suitable for demonstrating a mobile app concept
-
-## Tech stack
-
-- Next.js 16 App Router
-- React 19 and TypeScript
-- Tailwind CSS 4
-- Base UI and shadcn UI primitives
-- Lucide icons
-
-## Getting started
-
-Install dependencies and start the development server:
+### 1. Backend
 
 ```bash
-npm install
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+On Windows, activate with `.venv\Scripts\activate`.
+
+### 2. Frontend
+
+From the project root:
+
+```bash
+npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open http://localhost:3000. The default API URL is http://127.0.0.1:8000.
+To override it, set `NEXT_PUBLIC_API_URL` in `.env.local`; see `.env.example`.
+Restart Next.js after changing this value.
 
-## Quality checks
+The API allows frontend origins `http://localhost:3000` and
+`http://127.0.0.1:3000`. Set the backend `CORS_ORIGINS` environment variable
+to a comma-separated list when using another origin. A phone accessing the
+demo over the network needs the computer's reachable API address, both servers
+bound to a reachable interface, and that frontend origin in `CORS_ORIGINS`.
+
+## Demo flow
+
+1. Choose individual photos or a folder, including subfolders.
+2. Review previews, remove unwanted selections, or clear the selection.
+3. Press the floating **Analyze** button at the bottom right.
+4. Explore Gallery filters, Similar Photos, Photo Detail, and Summary.
+5. Refresh or navigate between screens; the last completed analysis is restored
+   from IndexedDB, including JPEG previews.
+6. Select another batch from the home page to replace the previous result.
+
+The interface is in Thai; the Smart Gallery logo name is retained.
+General result pages use everyday wording; the analysis-settings section keeps
+technical method names and parameter labels. Back controls show an arrow icon
+with an accessible destination label. Delete recommendations use a solid red badge.
+
+Photo Detail keeps the quality and sharpness scores. Light is shown separately
+as a gray–green–orange–red band with a downward pointer and a dark/normal/bright
+status, instead of presenting `exposureScore` as light intensity. Its position
+uses the existing classification, brightness and clipping measurements to show
+severity within that category; it is not a percentage or a raw luminance axis.
+Highlight/shadow clipping can place the pointer outside the normal region even
+when the mean brightness looks normal. The scoring and classification formulas
+are unchanged. Older saved results retain a category marker and can be analyzed
+again for a detailed position.
+Photo Detail returns to the originating Gallery or Groups page, including the
+selected Gallery filter and the photo's position. Return destinations survive
+refresh and are restricted to these local routes.
+
+Folder selection uses `webkitdirectory`; use a current Chrome/Edge browser for
+the demo. Individual-image drag and drop is supported. Use **Choose folder**
+to include subfolders instead of dropping a directory.
+
+Supported files: JPG/JPEG, PNG, BMP, WebP, HEIC/HEIF. Limits are 200 images,
+30 MiB per image, and 200 MiB total. The UI displays base-1024 sizes as B, KB, MB, or GB, and image dimensions in px.
+Unsupported, duplicate, or over-limit selections are reported. Damaged files
+are skipped by the backend with per-file messages; if every file fails, the
+previous analysis is retained. Uploads are keyed by stable IDs, so repeated
+filenames in different folders do not mix up results.
+
+HEIC/HEIF previews are generated by the backend as JPEG. Before analysis,
+these formats show a placeholder if the browser cannot display them.
+
+## Image processing flow
+
+```text
+Images → EXIF orientation + RGB + resize (longest side ≤ 1024 px)
+       → Sharpness (Laplacian; optional configured Tenengrad)
+       → Exposure (Y luminance + clipping)
+       → Quality scoring
+       → Timed photos: group by capture time first (complete-link, seconds)
+         Preserve those groups; optionally join them with a separate timed pHash rule
+         Untimed photos: group by pHash only (configured complete/average linkage)
+       → Best Shot / near-tie review → Quality-gap recommendations
+```
+
+Runtime settings come only from `backend/config/best_parameters.json`.
+They are validated at backend startup. Restart the backend after replacing the
+JSON. Development evaluation scores in that file are provenance, not inference
+inputs or accuracy claims for uploaded photos.
+
+The editable JSON and the Summary page show the current thresholds and weights.
+The demo uses `similarity.strategy: "exif_time_or_phash"`. Changing
+`phash_threshold` affects only untimed photos. Timed photos use
+`exif_time_window_seconds` first, then the separate `timed_phash_threshold` for
+pairs outside that window. Timed and untimed photos never share a group.
+Original time groups are preserved when pHash adds matches later.
+The missing-EXIF fallback is enabled with `similarity.missing_exif_policy: "phash"`;
+the existing numeric parameters are preserved.
+An omitted `similarity.linkage` defaults to `"complete"` and an omitted
+`recommendation.best_shot_tie_margin` defaults to `2.0`, exactly as in the
+notebook loader. Defaults are added in memory, not written to the file.
+
+For reference, the selected settings shown in the latest notebook used the
+following values. These are experiment settings, not defaults to overwrite your
+current tuning. Use `strategy: "exif_phash"` and `missing_exif_policy: "strict"`
+to compare with the notebook's original grouping behavior:
+
+```json
+{
+  "similarity": {
+    "strategy": "exif_phash",
+    "missing_exif_policy": "strict",
+    "phash_threshold": 29,
+    "exif_time_window_seconds": 30,
+    "linkage": "average"
+  },
+  "quality_score": {
+    "sharpness_weight": 0.2,
+    "exposure_weight": 0.8
+  },
+  "recommendation": {
+    "duplicate_quality_gap": 5.0,
+    "best_shot_tie_margin": 0.25
+  }
+}
+```
+
+SSIM was removed from the latest notebook flow and from runtime dependencies.
+The supported strategies are `exif_time_or_phash` (current demo) and
+`exif_phash` (legacy notebook comparison). Remove a legacy non-null
+`ssim_threshold`; an old null value is harmless. The time window must be a
+finite non-negative number.
+
+Missing timestamps are controlled by `similarity.missing_exif_policy`:
+
+- `"phash"` (enabled in the demo): if both timestamps are missing or unreadable,
+  compare image pHashes without time filtering, using `phash_threshold`.
+  Timed and untimed photos are kept in separate groups, even for identical images.
+- `"strict"` (the default if omitted): untimed photos receive quality scores but
+  stay ungrouped. The active strategy determines how timed photos are grouped.
+
+In the current strategy, timed photos are first clustered by capture-time
+differences in seconds. Each original group's span cannot exceed the time
+window, and those matches never have to pass pHash.
+
+`similarity.timed_phash_threshold` adds an independent, optional second rule:
+
+- If time passes, keep the original grouping regardless of pHash.
+- Otherwise, compare the pair with `timed_phash_threshold`. Larger values are
+  looser. The demo starts at `29`, independently of the user's untimed threshold.
+- Original time groups and singletons are treated as whole units. They merge
+  with complete linkage only when **every** cross-group pair passes either
+  time or the timed pHash rule. Existing time groups never split, and a chain
+  of partial pHash matches cannot pull an incompatible group into the result.
+- The additional pHash rule has no extra time cap. Set it to `null` or omit it
+  to restore time-only grouping. It accepts integers from `0` to `64`.
+
+The pair table labels time matches `exif_time`, beyond-window comparisons
+`timed_phash`, and untimed comparisons `phash`. Only photos within the same
+timestamp pool are compared. Pair decisions are not final cluster membership.
+Reasons identify groups joined through timed pHash. Both kinds of groups keep
+the existing Best Shot, near-tie and quality-gap recommendation rules.
+
+The current strategy bypasses the notebook's separate rescue/merge and guards;
+it uses the grouping rules above. Only `timed_phash_threshold` was added to the
+runtime JSON in this update; existing thresholds and weights are preserved.
+This strategy and the missing-EXIF fallback are intentional extensions of the
+notebook. Recorded development metrics do not evaluate them.
+`selection.similarity_policy` describes the historical experiment; the
+`similarity` section controls runtime behavior.
+
+For `strategy: "exif_phash"` only, timed photos still require both EXIF and
+pHash. The following legacy refinements and safety guards remain available for
+notebook comparisons:
+
+- Singleton rescue considers original groups of at least three photos. All time
+  differences must pass the base window, mean pHash ≤ threshold + 0.5, maximum
+  pHash ≤ threshold + 5, and at least two strict pHash matches are required.
+  Only one eligible target group is allowed.
+- Group merge considers groups with at least two photos and never compounds
+  an already rescued group's uncertainty. Every cross-group pHash must pass
+  the original threshold, time differences must be within twice the base window,
+  and at least two cross links must pass the original time window. Ambiguous
+  multi-target matches are rejected.
+- Rescued photos are always REVIEW. If a rescued photo wins Best Shot, multiple
+  photos are rescued, or a rescued group has a near tie, the group requires review.
+  Otherwise original delete candidates need a strict match to the Best Shot and
+  confirmation from at least two other original members.
+- Group-merge guards protect former Best Shots. Other delete recommendations
+  must already be justified in the original group and pass the original strict
+  rule to the new Best Shot. Near-tied merged groups require review.
+
+Only grouped photos can receive a Best Shot badge. The highest quality score
+wins provisionally. If the top two scores differ by less than the tie margin,
+all photos within that margin of the top score are REVIEW
+(`bestShotNeedsReview=true`), while more distant members still follow the
+quality-gap rule unless a refinement safety guard overrides them. This follows
+the executable notebook function, rather than its older whole-group-tie wording.
+Best Shot badges explicitly show when review is needed. A singleton that remains
+ungrouped is kept only if sharp with normal exposure, otherwise it is marked for
+review. Scores are heuristics on a
+0–100 scale, not probabilities. Quality weights and recommendation rules remain
+provisional, as in the experiment notebook.
+
+## Routes and data
+
+| Route         | Data                                                        |
+| ------------- | ----------------------------------------------------------- |
+| `/`           | Selection and upload to FastAPI                             |
+| `/gallery`    | Current analysis, filters, skipped-file and EXIF notices    |
+| `/groups`     | Current similarity groups and their Best Shots              |
+| `/photo/[id]` | Current photo scores, reasons, dimensions, and capture time |
+| `/summary`    | Current totals, potential savings, and analysis settings    |
+
+All result pages share `AnalysisProvider`. Original files are uploaded to the
+configured service and processed in a temporary directory, removed after the
+request. Only the latest result and resized JPEG previews are saved in this
+browser's IndexedDB. The pending upload selection is not persisted.
+Stored results from the previous algorithm version are not restored; analyze
+again after updating the pipeline or changing the parameters.
+
+Browser storage may be disabled or full; the app then explains that results are
+available only in the current tab. A stale photo URL after replacing a session
+shows a link back to the current gallery.
+
+`data/mock-data.ts` contains historical UI fixtures only; live routes do not
+import it.
+
+## Project structure
+
+```text
+app/                      Next.js routes and global styling
+components/               Application UI and shared analysis states
+components/ui/            Generated Base UI / shadcn primitives
+components/upload/        Image/folder picker and floating Analyze action
+contexts/                 Shared analysis session and hydration
+lib/                      API client, IndexedDB storage, shared utilities
+types/                    Frontend response/session contracts
+backend/app/              FastAPI endpoints, validation, schemas, pipeline
+backend/config/           Development-selected best_parameters.json
+backend/tests/            Algorithm and API regression tests
+data/                     Historical mock fixtures
+```
+
+The existing layout and native system font stack are retained.
+
+## Checks
+
+Frontend:
 
 ```bash
 npm run check
 npm run build
 ```
 
-`npm run check` runs ESLint with zero warnings allowed and performs a full
-TypeScript check.
+For environments that cannot run Turbopack, use `npx next build --webpack`.
+To run a built frontend, use `npm run start`.
 
-## Project structure
+Backend, from `backend/` with the virtual environment activated:
 
-```text
-app/                  Routes, layouts, metadata, and global styles
-components/           Application components
-components/ui/        Generated reusable UI primitives
-components/upload/    Photo-selection experience
-data/                 Deterministic mock analysis data
-lib/                  Shared utilities
-types/                Analysis domain types
+```bash
+pip install -r requirements-dev.txt
+python -m unittest discover -s tests -v
 ```
 
-## Mock data and backend integration
+Tests cover time matches independent of pHash, separate timed/untimed thresholds,
+preservation of original time groups, beyond-window matches, capture-window boundaries,
+strict EXIF, missing-EXIF pHash fallback,
+separation of timed/untimed photos, complete-link chain prevention,
+average-link, rescue/merge safety guards, near-tie margins, parameter validation,
+per-file failures, duplicate names, ID mapping, orientation, upload limits, and
+HEIC-to-JPEG conversion. Test parameters are fixed separately from the editable
+runtime JSON.
 
-Mock results live in `data/mock-data.ts` and follow the contracts in
-`types/analysis.ts`. When a backend is introduced, replace those imports with a
-data-access layer while keeping the page and component interfaces stable.
+To compare core decisions against a supplied latest notebook, from `backend/`:
 
-A production implementation should validate uploaded file types and sizes on
-the server, run the image-analysis pipeline outside the browser, persist an
-analysis session, and require explicit user confirmation before deleting any
-photo.
+```bash
+PYTHONPATH=. python tests/check_notebook_parity.py --notebook /path/to/presentation_results.ipynb
+```
 
-## Current limitations
+This loads only the inspected core function definitions, never notebook setup,
+Drive mounting, experiments, or parameter-saving cells. It compares intermediate
+stages and final results in legacy `exif_phash` strict mode with identical
+features and parameters. Time-first/timed-pHash/fallback behavior is covered separately by
+regression tests. The existing
+nested-EXIF reader for phone photos remains an intentional improvement over the
+notebook's top-level EXIF reader.
 
-- No backend, authentication, persistence, or real image analysis
-- Selected images and mock analysis results are not linked
-- Remote sample images require an internet connection
-- Recommendations are illustrative and must not be treated as deletion actions
+## Demo limitations
+
+- No accounts or server-side session database.
+- Pairwise similarity uses O(n²) comparisons; larger batches and refinements
+  take longer. Loading is indeterminate, not a fabricated progress percentage.
+- Without EXIF, pHash similarity has no capture-time evidence; visually alike
+  photos taken far apart can group together. Use `missing_exif_policy: "strict"`
+  to require timestamps again.
+- Complex lighting and artistic blur can produce imperfect recommendations.
+- No automatic deletion or original-file management.

@@ -1,9 +1,5 @@
-import type {
-  PhotoAnalysis,
-  SimilarityGroup,
-} from "@/types/analysis";
-
-export const photos: PhotoAnalysis[] = [
+// Historical UI fixtures, retained for reference. Live routes use AnalysisProvider.
+export const photos = [
   {
     id: "1",
     filename: "IMG_1001.jpg",
@@ -31,10 +27,7 @@ export const photos: PhotoAnalysis[] = [
     similarityGroup: "G001",
     bestShot: false,
     recommendation: "RECOMMEND_DELETE",
-    reasons: [
-      "Similar to IMG_1001.jpg",
-      "Lower sharpness than best shot",
-    ],
+    reasons: ["Similar to IMG_1001.jpg", "Lower sharpness than best shot"],
     fileSizeMB: 4.6,
   },
   {
@@ -63,11 +56,7 @@ export const photos: PhotoAnalysis[] = [
     similarityGroup: null,
     bestShot: false,
     recommendation: "KEEP",
-    reasons: [
-      "Sharp image",
-      "Normal exposure",
-      "No similar image detected",
-    ],
+    reasons: ["Sharp image", "Normal exposure", "No similar image detected"],
     fileSizeMB: 5.4,
   },
   {
@@ -105,11 +94,9 @@ export const photos: PhotoAnalysis[] = [
   },
 ];
 
-export const similarityGroups: SimilarityGroup[] = [
+export const similarityGroups = [
   {
     id: "G001",
-    photos: photos.filter(
-      (photo) => photo.similarityGroup === "G001"
-    ),
+    photos: photos.filter((photo) => photo.similarityGroup === "G001"),
   },
 ];

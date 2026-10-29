@@ -12,13 +12,12 @@ export default function HomePage() {
 
         <div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
-            Clean up your gallery intelligently
+            จัดระเบียบคลังรูปอย่างชาญฉลาด
           </h1>
 
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Analyze photo quality, detect similar photos,
-            and find the best shots without automatically
-            deleting your photos.
+            วิเคราะห์คุณภาพ จัดกลุ่มรูปคล้าย และค้นหารูปที่ดีที่สุด
+            เพื่อช่วยคุณเลือกเก็บ โดยไม่ลบรูปให้อัตโนมัติ
           </p>
         </div>
       </section>

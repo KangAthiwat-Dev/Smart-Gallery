@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+pillow-heif
+opencv-python-headless
+numpy
+ImageHash
+scikit-learn
+pandas

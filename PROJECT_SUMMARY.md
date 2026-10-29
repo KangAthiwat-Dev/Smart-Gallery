@@ -1,201 +1,190 @@
-# สรุปโครงการ Best Shot
+# สรุปโครงการ Smart Gallery / Best Shot
 
-> สถานะโครงการ ณ วันที่ 20 กันยายน 2026  
-> เวอร์ชันปัจจุบัน: `0.1.0` — Frontend Prototype
+สถานะ ณ วันที่ 29 ตุลาคม 2026: ต้นแบบสำหรับ demo ที่เชื่อม Next.js กับ FastAPI
+เพื่อประมวลผลรูปจริง โดยใช้ค่าที่เลือกจากการทดลองใน `best_parameters.json`
 
-## 1. ภาพรวมโครงการ
+## เป้าหมายและสถานะ
 
-Best Shot เป็นต้นแบบแอปพลิเคชันบนมือถือสำหรับช่วยผู้ใช้ตรวจสอบและจัดระเบียบ
-คลังรูปภาพ โดยระบบมีเป้าหมายที่จะวิเคราะห์คุณภาพของรูป ตรวจจับรูปที่คล้ายกัน
-เลือกรูปที่ดีที่สุดในแต่ละกลุ่ม และเสนอรูปที่ควรเก็บ ตรวจสอบ หรือลบ
+โครงการช่วยตรวจคุณภาพรูป จัดกลุ่มรูปคล้าย เลือก Best Shot และแนะนำ
+KEEP / REVIEW / RECOMMEND_DELETE พร้อมเหตุผล ระบบไม่ลบหรือแก้ไขต้นฉบับ
 
-แนวคิดสำคัญของโครงการคือระบบทำหน้าที่เป็นผู้ช่วยตัดสินใจเท่านั้น
-และจะไม่ลบรูปของผู้ใช้โดยอัตโนมัติ
+ทุกหน้าผลลัพธ์ใช้ข้อมูลจากการวิเคราะห์จริงชุดเดียวกันผ่าน AnalysisProvider
+แทนการอ่าน mock data แยกตามหน้า ข้อมูล mock เดิมเก็บไว้เป็น reference เท่านั้น
 
-ในสถานะปัจจุบันโครงการเป็น frontend prototype ยังไม่มี backend และยังไม่มี
-กระบวนการวิเคราะห์ภาพจริง ข้อมูลผลวิเคราะห์ทั้งหมดมาจาก mock data ที่กำหนดไว้
-ล่วงหน้า เพื่อใช้ทดสอบหน้าจอ user flow และรูปแบบการนำเสนอข้อมูล
+## Flow ที่ใช้งานได้
 
-## 2. วัตถุประสงค์
+1. เลือกรูปหลายใบหรือเลือกโฟลเดอร์รวมโฟลเดอร์ย่อย
+2. ตรวจ preview จำนวนรูปและขนาดรวม เพิ่ม/เอารูปออกได้
+3. กด Analyze ที่ลอยมุมขวาล่าง แม้เลื่อนดูรูปจำนวนมาก
+4. ส่งไฟล์และ stable ID ไปยัง FastAPI
+5. วิเคราะห์ภาพและแสดงผลที่ Gallery
+6. เปิด Groups, Photo Detail และ Summary จากผลชุดเดียวกัน
+7. Refresh แล้วคืนผลล่าสุดพร้อม JPEG preview จาก IndexedDB
+8. เลือกรูปชุดใหม่เพื่อแทนที่ผลเดิมได้
 
-- ออกแบบ user flow สำหรับการเลือกรูปและตรวจสอบผลวิเคราะห์
-- แสดงคะแนนคุณภาพ ความคมชัด และแสงของแต่ละรูป
-- แสดงกลุ่มรูปภาพที่มีความคล้ายกัน
-- ระบุ Best Shot ภายในกลุ่มรูปที่คล้ายกัน
-- แบ่งคำแนะนำเป็น Keep, Review และ Recommend Delete
-- สรุปพื้นที่จัดเก็บที่อาจประหยัดได้
-- ยืนยันแนวทาง UX ก่อนเชื่อมต่อระบบประมวลผลภาพจริง
+ระหว่างวิเคราะห์จะล็อกรายการที่เลือก ป้องกันผลกับรูปไม่ตรงกัน หากบางไฟล์เสีย
+จะข้ามพร้อมแจ้งเหตุผล หากทุกไฟล์เสียหรือ API เชื่อมต่อไม่ได้จะแสดง error
+และเก็บผลเดิมไว้
 
-## 3. User flow ปัจจุบัน
+## Algorithm ปัจจุบัน
 
-1. ผู้ใช้เลือกรูปหลายไฟล์หรือ drag and drop ลงใน upload area
-2. ระบบแสดง preview ชื่อไฟล์ ขนาดไฟล์ และจำนวนรูปภายใน browser
-3. ผู้ใช้สามารถลบรูปบางรูปออกจากรายการหรือล้างรายการทั้งหมดได้
-4. ผู้ใช้เลือก **View sample analysis** เพื่อเปิดผลวิเคราะห์ตัวอย่าง
-5. ผู้ใช้ตรวจสอบผลผ่าน Gallery, Similar Photos, Photo Detail และ Summary
+- แก้ EXIF orientation, แปลง RGB และ resize ด้านยาวสุดไม่เกิน 1024 px
+- Sharpness ใช้ Variance of Laplacian ตาม method ที่เลือกใน JSON
+- Exposure ใช้ Y luminance, brightness mean และ dark/highlight clipping
+- Underexposed มีลำดับก่อน overexposed ตาม notebook
+- ใช้ strategy `exif_time_or_phash` โดยไม่มี SSIM
+- รูปมีเวลาใช้ช่วงเวลาถ่ายจัดกลุ่มก่อน โดยคู่ที่ผ่านเวลาไม่ต้องผ่าน pHash
+- กลุ่มรูปมีเวลาใช้ complete-link จากระยะเวลาเป็นวินาที
+  ช่วงเวลาของกลุ่มตั้งต้นไม่เกิน `exif_time_window_seconds`
+- เพิ่ม `timed_phash_threshold` สำหรับรูปมีเวลาที่ห่างเกินกรอบ เริ่มที่ 29
+  แยกจาก `phash_threshold` ของรูปไม่มีเวลา (ค่าปัจจุบันให้ยึด JSON)
+- คงกลุ่มเวลาเดิมไว้ แล้วรวมทั้งกลุ่ม/รูปเดี่ยวได้เมื่อทุกคู่ข้ามกลุ่มผ่าน
+  เวลา หรือเกณฑ์ pHash ของรูปมีเวลา โดยใช้ complete-link ไม่ดึงรูปผ่านลูกโซ่
+- เกณฑ์ใหม่ไม่มีเพดานเวลาเพิ่ม ตั้งเป็น `null` หรือลบ key เพื่อกลับไปใช้เวลาอย่างเดียว
+- ถ้าทั้งสองรูปไม่มีเวลาหรืออ่านเวลาไม่ได้ ใช้ pHash อย่างเดียวเพื่อจัดกลุ่ม
+  เมื่อ `similarity.missing_exif_policy` เป็น `"phash"` โดยใช้ threshold เดิม
+- รูปที่มีเวลาจะไม่รวมกลุ่มกับรูปที่ไม่มีเวลา แม้ภาพจะเหมือนกัน
+- เปลี่ยน policy เป็น `"strict"` เพื่อกลับไปบังคับเวลาตาม notebook ได้
+- รูปไม่มีเวลาใช้ complete-link หรือ average-link ตาม `similarity.linkage`
+- ปรับ `phash_threshold` มีผลเฉพาะรูปไม่มีเวลา ส่วนกรอบเวลาและ
+  `timed_phash_threshold` มีผลเฉพาะรูปมีเวลา
+- โหมดนี้ข้าม Singleton Rescue, Group Merge และ guards เดิมที่พึ่ง pHash
+  และใช้ขั้นตอน timed pHash แยกตามกฎข้างต้น
+- โหมดเก่า `exif_phash` พร้อม refinements/guards ยังเก็บสำหรับเทียบ notebook
+- Quality score normalize ความคมและแสงแล้วถ่วงน้ำหนัก
+- เลือกคะแนนสูงสุดเป็น Best Shot เฉพาะรูปในกลุ่ม
+- คะแนนใกล้กันน้อยกว่า `best_shot_tie_margin` ให้รูปที่อยู่ใน margin เป็น REVIEW
+  และมี `bestShotNeedsReview` ตามฟังก์ชันจริง ไม่ได้ REVIEW ทั้งกลุ่มเสมอไป
+- ใช้ quality gap เพื่อให้คำแนะนำสมาชิกที่เหลือในกลุ่ม
+- เหตุผลระบุว่ากลุ่มได้จากเวลาอย่างเดียว หรือรวมเพิ่มเติมด้วย timed pHash
+- รูปเดี่ยวที่คมและแสงปกติเป็น KEEP นอกนั้น REVIEW
 
-ไฟล์ที่ผู้ใช้เลือกจะถูกใช้สำหรับ preview ภายใน browser เท่านั้น ไม่มีการ upload
-ออกจากเครื่อง และยังไม่ได้ถูกเชื่อมกับผลวิเคราะห์ใน mock data
+เพิ่มการอ่าน DateTimeOriginal จาก nested Exif IFD เพื่อรองรับไฟล์กล้อง/มือถือจริง
 
-## 4. หน้าจอและเส้นทาง
+การปรับครั้งล่าสุดเพิ่มเฉพาะ `similarity.timed_phash_threshold` เริ่มต้นที่ 29
+โดยรักษาค่า threshold และน้ำหนักที่ผู้ใช้ปรับไว้ ค่าตัวเลขปัจจุบันให้ยึด JSON
+หรือหน้าสรุปผล เนื่องจากผู้ใช้ปรับทดสอบได้:
 
-| Route | หน้าที่ |
-| --- | --- |
-| `/` | เลือกรูป แสดง preview และเข้าสู่ผลวิเคราะห์ตัวอย่าง |
-| `/gallery` | แสดงรูปทั้งหมดและกรองตามประเภทคำแนะนำ |
-| `/groups` | แสดงกลุ่มรูปที่คล้ายกันและ Best Shot ของแต่ละกลุ่ม |
-| `/photo/[id]` | แสดงรายละเอียด คะแนน และเหตุผลของคำแนะนำรายรูป |
-| `/summary` | สรุปจำนวนรูปแต่ละประเภทและพื้นที่ที่อาจประหยัดได้ |
-| Not-found fallback | แสดงหน้า Photo not found สำหรับ route หรือรูปที่ไม่มีข้อมูล |
+| รายการ                      | ค่า               |
+| --------------------------- | ----------------- |
+| Sharpness method            | laplacian_score   |
+| Sharpness threshold         | 574.4107330939421 |
+| Brightness low / high       | 80 / 145          |
+| Dark / highlight clipping   | 0.15 / 0.03       |
+| Similarity strategy         | exif_time_or_phash |
+| Missing EXIF policy         | phash             |
+| pHash distance threshold    | ดูค่าปัจจุบันใน JSON |
+| Timed pHash threshold       | 29 (ปรับแยกได้)     |
+| EXIF time window            | ดูค่าปัจจุบันใน JSON |
+| Sharpness / Exposure weight | ดูค่าปัจจุบันใน JSON |
+| Duplicate quality gap       | ดูค่าปัจจุบันใน JSON |
+| Best Shot tie margin        | ดูค่าปัจจุบันใน JSON |
 
-หน้า `/photo/[id]` ใช้ `generateStaticParams` เพื่อสร้างหน้าของรูปใน mock data
-ล่วงหน้าในขั้นตอน production build
+ถ้า JSON ไม่ระบุ `linkage` จะใช้ `complete` และถ้าไม่ระบุ
+`best_shot_tie_margin` จะใช้ `2.0` ตาม default ใน notebook
+ค่าที่แสดงเป็น selected ใน notebook ล่าสุดคือ pHash 29, EXIF 30 วินาที,
+`linkage: "average"`, น้ำหนัก 0.2/0.8 และ tie margin 0.25
+ต้องเปลี่ยนค่าใน `backend/config/best_parameters.json` เองแล้ว restart backend
 
-## 5. ฟีเจอร์ที่ทำงานแล้ว
+ถ้าไม่ระบุ `missing_exif_policy` จะใช้ `"strict"` เพื่อรองรับ JSON จาก notebook เดิม
+การใช้เวลาก่อน ตามด้วย timed pHash และ fallback เป็นส่วนที่เพิ่มจาก notebook ตามคำขอทดลอง ไม่ได้ใช้ผล Group F1 เดิม
+มายืนยันความแม่นยำของโหมดนี้ ส่วน `selection.similarity_policy` เก็บประวัติ
+การทดลองเดิม ไม่ใช่ตัวเลือกควบคุม runtime
 
-- เลือกรูปหลายไฟล์จาก file picker
-- Drag and drop รูปภาพ
-- กรองไฟล์ที่ไม่ใช่รูปภาพ
-- ป้องกันการเพิ่มไฟล์เดิมซ้ำในรายการ
-- แสดง local preview ผ่าน object URL
-- คืนหน่วยความจำของ object URL เมื่อเอารูปออกหรือออกจากหน้า
-- รองรับ mouse, keyboard และ screen reader ใน upload area
-- กรอง Gallery ตาม Keep, Review และ Recommend Delete
-- แสดง Similarity Group และ Best Shot
-- แสดง Quality, Sharpness และ Exposure score
-- แสดงเหตุผลของคำแนะนำรายรูป
-- คำนวณพื้นที่จัดเก็บที่อาจประหยัดได้จาก mock data
-- Responsive layout สำหรับหน้าจอมือถือและเดสก์ท็อป
-- ใช้ Next Image optimization กับรูปตัวอย่างจาก Picsum
-- มี branded favicon และหน้า not-found ของโครงการ
+JSON เป็นแหล่งค่าหลักและถูก validate เมื่อ backend เริ่มทำงาน
+หลังเปลี่ยน JSON ต้อง restart backend และวิเคราะห์รูปใหม่ ส่วน development metrics เป็นข้อมูลผลทดลอง
+ไม่ใช่คะแนนของรูปที่ผู้ใช้ upload และไม่ใช่ Final Test metrics
 
-## 6. สถานะข้อมูลและโมเดล
+## หน้าจอ
 
-Mock data อยู่ใน `data/mock-data.ts` และ type definitions อยู่ใน
-`types/analysis.ts`
+| หน้า         | การทำงาน                                                     |
+| ------------ | ------------------------------------------------------------ |
+| Upload       | เลือกรูป/โฟลเดอร์ ตรวจรายการ และกดปุ่ม Analyze แบบ floating  |
+| Gallery      | รูปจริง filter คำแนะนำ สรุปเบื้องต้น และแจ้งไฟล์ที่ข้าม      |
+| Groups       | กลุ่มจริง Best Shot และ empty state เมื่อไม่พบกลุ่ม          |
+| Photo Detail | รูปจริง คะแนนคุณภาพ/ความคมชัด ระดับแสง เหตุผล เวลาถ่าย และขนาดภาพ |
+| Summary      | จำนวนแต่ละคำแนะนำ พื้นที่ที่อาจประหยัด และค่าที่ใช้วิเคราะห์ |
 
-ประเภทคำแนะนำที่รองรับ:
+มีสถานะกำลังคืน session, ยังไม่มีผล และ photo ID ที่ไม่อยู่ใน session ปัจจุบัน
 
-```ts
-type Recommendation = "KEEP" | "REVIEW" | "RECOMMEND_DELETE";
-```
+ข้อความหน้าทั่วไปเป็นภาษาไทยที่อ่านง่าย โดยเก็บศัพท์เทคนิค เช่น EXIF, pHash
+และชื่อ method ไว้ในส่วนค่าที่ใช้วิเคราะห์ คงชื่อโลโก้ Smart Gallery ไว้
+ปุ่มกลับแสดงไอคอนลูกศรพร้อมชื่อสำหรับโปรแกรมอ่านหน้าจอ และกลับไปหน้าต้นทาง
+พร้อมตัวกรองและตำแหน่งรูปเดิม และยังใช้ได้หลังรีเฟรชหน้ารายละเอียด
+การแปลทำเฉพาะส่วนแสดงผล โดยไม่เปลี่ยน algorithm หรือค่าที่ API ใช้ตัดสิน
 
-ข้อมูลรูปแต่ละรายการประกอบด้วย:
+แสงแสดงเป็นแถบเทา–เขียว–ส้ม–แดง พร้อมสามเหลี่ยมคว่ำชี้ตำแหน่งและสถานะ
+มืด/ปกติ/สว่างเกิน โดยใช้ classification และค่าความสว่าง/พื้นที่มืดหรือสว่างจัด
+ที่คำนวณอยู่แล้ว แทนการนำ exposureScore มาแสดงเป็นความเข้มแสง
+ตำแหน่งเป็นระดับความรุนแรงภายในแต่ละสถานะ ไม่ใช่เปอร์เซ็นต์หรือแกน luminance ดิบ
+ผลเก่าที่ยังไม่มีค่ารายละเอียดใช้ตัวชี้ตามสถานะ และวิเคราะห์ใหม่เพื่อดูตำแหน่งละเอียดได้
+ป้ายแนะนำลบใช้พื้นแดงทึบและตัวอักษรขาวเหมือนป้ายคำแนะนำอื่น
 
-- ID, ชื่อไฟล์ และ URL ของรูป
-- คะแนนความคมชัด
-- คะแนนแสง
-- คะแนนคุณภาพรวม
-- ID ของกลุ่มรูปที่คล้ายกัน
-- สถานะ Best Shot
-- คำแนะนำและเหตุผลประกอบ
-- ขนาดไฟล์โดยประมาณ
+## การจัดการไฟล์และ session
 
-## 7. เทคโนโลยี
+- รองรับ JPG/JPEG, PNG, BMP, WebP, HEIC/HEIF
+- จำกัด 200 รูป, 30 MiB ต่อไฟล์, 200 MiB รวม
+- ใช้ relative path แยกรูปชื่อซ้ำจากคนละโฟลเดอร์
+- ใช้ stable ID เชื่อมผลกับรูป แทนการอ้างตำแหน่งใน array
+- Backend สร้าง JPEG preview ให้ browser แสดง HEIC/HEIF ได้หลังวิเคราะห์
+- ลบไฟล์ชั่วคราวของ backend หลังจบ request
+- เก็บผลและ preview ล่าสุดบน IndexedDB ของ browser
+- ไม่คืนผลจาก algorithm version เก่าเพื่อป้องกันการเข้าใจผิดว่าเป็นผลใหม่
+- รายการไฟล์ก่อนกด Analyze ไม่ได้เก็บข้าม refresh
+- กรณี browser storage ใช้ไม่ได้จะแจ้งว่าผลอยู่เฉพาะ tab ปัจจุบัน
 
-- Next.js 16 App Router
-- React 19
-- TypeScript
-- Tailwind CSS 4
-- Base UI และ shadcn UI primitives
-- Lucide React icons
+## โครงสร้างและเทคโนโลยี
 
-Typography ใช้ native system font stack เพื่อให้หน้าตาใกล้เคียง mobile
-application บนแต่ละระบบปฏิบัติการ และไม่ต้องดาวน์โหลด web font เพิ่มเติม
+Frontend ใช้ Next.js 16, React 19, TypeScript, Tailwind CSS 4,
+Base UI/shadcn และ Lucide โดยรักษา layout และ native system font เดิม
 
-## 8. โครงสร้างโปรเจกต์
+Backend ใช้ FastAPI, Pillow/pillow-heif, OpenCV, NumPy, pandas,
+ImageHash และ scikit-learn
 
 ```text
-app/
-├── gallery/page.tsx
-├── groups/page.tsx
-├── photo/[id]/page.tsx
-├── summary/page.tsx
-├── globals.css
-├── icon.svg
-├── layout.tsx
-├── not-found.tsx
-└── page.tsx
-
-components/
-├── ui/                  # Generated UI primitives
-├── upload/
-│   └── photo-upload.tsx
-├── app-header.tsx
-├── photo-card.tsx
-└── status-badge.tsx
-
-data/
-└── mock-data.ts
-
-lib/
-└── utils.ts
-
-types/
-└── analysis.ts
+app/                 Routes และ global styles
+components/          UI, upload และ shared analysis states
+contexts/            Analysis session
+lib/                 API client, IndexedDB และ utilities
+types/               Data contracts
+backend/app/         API, parameter validation และ image pipeline
+backend/config/      best_parameters.json
+backend/tests/       Algorithm และ API regression tests
+data/                Historical mock fixtures
 ```
 
-โครงสร้างยังคงเรียบง่ายให้เหมาะกับขนาดของ prototype โดยแยก routing,
-application components, UI primitives, mock data และ domain types ออกจากกัน
+## การตรวจสอบ
 
-## 9. Quality checks
+- ESLint แบบ zero warnings และ TypeScript
+- Production build ของ Next.js
+- Backend regression tests สำหรับ thresholds, EXIF, ทั้งสอง linkage, rescue,
+  merge, safety guards, tie margin, ไฟล์เสีย, IDs, orientation, limits และ HEIC
+- ทดสอบ fallback เมื่อไม่มีเวลาทั้งคู่ การแยกรูปมีเวลา/ไม่มีเวลาออกจากกัน
+  ภาพไม่คล้ายกัน การรักษากรอบเวลา
+  การเลือก Best Shot/แนะนำลบ และ policy/เหตุผลที่ API ส่งให้หน้าจอ
+- ทดสอบคู่ที่ผ่านเวลาโดยไม่อ่าน pHash และไม่เปลี่ยนเมื่อปรับเกณฑ์ของรูปไม่มีเวลา
+  รวมถึงขอบกรอบเวลา 0/30 วินาที การไม่เชื่อมกลุ่มเป็นลูกโซ่ และ upload รูปจริง
+- ทดสอบ timed pHash ที่ขอบ threshold, รูปเกินกรอบเวลา, การคงกลุ่มเวลาเดิม
+  การแยกค่าของสองชุดรูป การปิดเกณฑ์ใหม่ และคำอธิบายที่ API ส่งกลับ
+- เทียบ intermediate stages และ final results กับ core functions
+  ใน notebook ล่าสุดด้วยโหมดเก่า `exif_phash` แบบ strict ผ่าน 85 ชุดเปรียบเทียบ
+  โดยใช้ features/parameters เดียวกัน โหมดปัจจุบันทดสอบแยกจาก notebook
+- มี `backend/tests/check_notebook_parity.py` สำหรับรันทดสอบเทียบ notebook ซ้ำ
+- Test parameters แยกจาก JSON ที่ผู้ใช้เปลี่ยนเพื่อให้ทดสอบ regression ได้สม่ำเสมอ
+- ตรวจ demo ด้วยรูปทดสอบ รวมถึงการเลือกโฟลเดอร์และการคืน session
 
-คำสั่งที่เตรียมไว้:
+คำสั่งและวิธีเปิด frontend/backend อยู่ใน README.md และ backend/README.md
 
-```bash
-npm run lint
-npm run typecheck
-npm run check
-npm run build
-```
+## ข้อจำกัดและงานต่อไป
 
-สถานะการตรวจล่าสุด:
+- ยังไม่มีบัญชีผู้ใช้หรือฐานข้อมูล session ฝั่ง server
+- Similarity เปรียบเทียบเป็นคู่ O(n²) จึงจำกัด batch สำหรับ demo
+- ภาพที่ไม่มี EXIF จะจัดกลุ่มจากภาพอย่างเดียวในโหมด fallback จึงอาจรวมรูปคล้าย
+  ที่ถ่ายคนละเวลาได้ สามารถกลับไปใช้โหมด strict เพื่อบังคับเวลา
+- คะแนนเป็น heuristic ไม่ใช่ probability; quality weights และ recommendation
+  ยังเป็น provisional rules ตามการทดลอง
+- รูปแสงซับซ้อน/ตั้งใจเบลอยังอาจได้คำแนะนำไม่ตรงความต้องการ
+- ยังไม่มีการลบ ย้าย หรือจัดการต้นฉบับจริง
 
-- ESLint ผ่านโดยกำหนดให้ไม่มี warning
-- TypeScript typecheck ผ่าน
-- Production build ผ่านด้วย webpack
-- Routes ของ mock photo ถูก prerender เป็น static HTML
-- Browser smoke test ผ่านสำหรับ navigation, filters, detail page และ not-found
-- ไม่พบ console error หรือ warning ระหว่าง smoke test
-
-## 10. ข้อจำกัดปัจจุบัน
-
-- ยังไม่มี backend หรือ API
-- ยังไม่มี image processing pipeline จริง
-- รูปที่ผู้ใช้เลือกยังไม่เชื่อมกับผลวิเคราะห์
-- ไม่มี authentication หรือ user account
-- ไม่มี database หรือการบันทึก analysis session
-- ไม่มีการลบ ย้าย หรือแก้ไขไฟล์จริง
-- รูปตัวอย่างต้องเชื่อมต่ออินเทอร์เน็ตเพื่อโหลดจาก Picsum
-- ยังไม่มี automated unit, integration หรือ end-to-end tests
-- คะแนนและคำแนะนำทั้งหมดเป็นข้อมูลตัวอย่าง ไม่ควรใช้ตัดสินใจลบรูปจริง
-
-## 11. แนวทางพัฒนาระยะถัดไป
-
-1. กำหนด input/output contract ของ image analysis service
-2. พัฒนา sharpness, blur และ exposure analysis
-3. เพิ่ม similarity detection และ clustering
-4. กำหนดหลักเกณฑ์เลือก Best Shot ภายในแต่ละกลุ่ม
-5. เชื่อม upload flow กับ analysis session จริง
-6. เพิ่มสถานะ uploading, processing, success และ error
-7. เพิ่มฐานข้อมูลหรือ storage สำหรับผลวิเคราะห์
-8. เพิ่ม confirmation flow ก่อนดำเนินการกับไฟล์จริง
-9. เพิ่ม automated tests สำหรับ scoring, grouping และ user flow
-10. ทดสอบกับรูปจริงหลายประเภทและอุปกรณ์มือถือหลายขนาด
-
-## 12. ข้อควรระวังสำหรับการพัฒนา backend
-
-- ต้องตรวจสอบชนิดและขนาดไฟล์ซ้ำที่ฝั่ง server
-- ไม่ควรเชื่อถือ MIME type จาก browser เพียงอย่างเดียว
-- การประมวลผลภาพควรทำใน background job สำหรับงานที่ใช้เวลานาน
-- ต้องแยกคำว่า recommendation ออกจาก delete action อย่างชัดเจน
-- การลบรูปจริงต้องได้รับการยืนยันจากผู้ใช้ทุกครั้ง
-- ควรเก็บคะแนนย่อยและเหตุผลเพื่อให้ผลลัพธ์อธิบายได้
-- ต้องกำหนดนโยบายจัดเก็บและลบไฟล์ที่คำนึงถึงความเป็นส่วนตัวของผู้ใช้
-
-## 13. สถานะโดยสรุป
-
-Frontend prototype อยู่ในสถานะพร้อมใช้สำหรับสาธิตแนวคิดและรับ feedback ด้าน
-UX/UI แล้ว โครงสร้างรองรับการเปลี่ยน mock data เป็น data-access layer ในอนาคต
-โดยไม่จำเป็นต้องออกแบบหน้าจอใหม่ทั้งหมด งานหลักที่ยังเหลือคือ image processing,
-backend integration, persistence และการทดสอบด้วยข้อมูลจริง
+งานถัดไปคือประเมินด้วยรูปจริงและ Best Shot ground truth เพิ่มเติม
+รวมถึงเพิ่ม background processing และ server-side persistence หากจะใช้งานต่อจาก demo
