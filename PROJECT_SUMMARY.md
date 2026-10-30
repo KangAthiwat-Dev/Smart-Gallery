@@ -1,6 +1,6 @@
 # สรุปโครงการ Smart Gallery / Best Shot
 
-สถานะ ณ วันที่ 29 ตุลาคม 2026: ต้นแบบสำหรับ demo ที่เชื่อม Next.js กับ FastAPI
+สถานะ ณ วันที่ 30 ตุลาคม 2026: ต้นแบบสำหรับ demo ที่เชื่อม Next.js กับ FastAPI
 เพื่อประมวลผลรูปจริง โดยใช้ค่าที่เลือกจากการทดลองใน `best_parameters.json`
 
 ## เป้าหมายและสถานะ
@@ -94,6 +94,24 @@ KEEP / REVIEW / RECOMMEND_DELETE พร้อมเหตุผล ระบบ�
 JSON เป็นแหล่งค่าหลักและถูก validate เมื่อ backend เริ่มทำงาน
 หลังเปลี่ยน JSON ต้อง restart backend และวิเคราะห์รูปใหม่ ส่วน development metrics เป็นข้อมูลผลทดลอง
 ไม่ใช่คะแนนของรูปที่ผู้ใช้ upload และไม่ใช่ Final Test metrics
+
+## ประเภทภาพใน dataset และผลทำนาย
+
+| โมดูล | Dataset ทั้งชุด | ผลทำนายของแอป |
+| --- | --- | --- |
+| Sharpness | Sharp, Slight Blur, Motion Blur, Defocus Blur อย่างละ 30 ภาพ รวม 120 | `sharp` / `blur` |
+| Exposure | Normal, Underexposed, Overexposed อย่างละ 30 ภาพ รวม 90 | `normal` / `underexposed` / `overexposed` |
+| Similarity | 20 กลุ่ม กลุ่มละ 5 ภาพ รวม 100 | Group ID ที่ระบบจัดได้ |
+
+Sharpness ใช้ threshold แยกคม–เบลอ และรวมภาพเบลอทั้ง 3 ประเภทเป็น `blur`
+จึงยังไม่ทำนายชนิด Motion Blur หรือ Defocus Blur โดยตรง
+Notebook ใน `colab/` เก็บ label เดิมทั้ง 4 ประเภทไว้รายงานผลแยกประเภท
+พร้อม Confusion Matrix 2×2 สำหรับคม–เบลอ และ 3×3 สำหรับแสง
+ส่วนประเมินตรวจ label และนับภาพครบใน split ที่เลือก ไม่ตัดชนิดเบลอที่ไม่ใช่คำว่า `blur` ทิ้ง
+
+Similarity ใช้ Group ID เพื่อบอกสมาชิกกลุ่ม ไม่ใช่ class แบบ Sharpness/Exposure
+ประเมินด้วยคู่ภาพ Same/Different group และ ARI โดยไม่บังคับเลขกลุ่มให้ตรงกับ GT
+จำนวนกลุ่มใน dataset เป็นข้อมูลการทดลอง แอปจัดกลุ่มตามรูปที่อัปโหลดจริง
 
 ## หน้าจอ
 

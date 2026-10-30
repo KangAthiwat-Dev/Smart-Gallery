@@ -96,6 +96,22 @@ Images → EXIF orientation + RGB + resize (longest side ≤ 1024 px)
        → Best Shot / near-tie review → Quality-gap recommendations
 ```
 
+### Dataset categories and prediction classes
+
+| Module | Full experimental dataset | App output |
+| --- | --- | --- |
+| Sharpness | Sharp, Slight Blur, Motion Blur, Defocus Blur: 30 images each (120 total) | `sharp` or `blur` |
+| Exposure | Normal, Underexposed, Overexposed: 30 images each (90 total) | `normal`, `underexposed`, or `overexposed` |
+| Similarity | 20 groups of 5 images (100 total) | Generated group ID, or no group |
+
+The three blur types map to `blur` for the current sharpness classifier.
+The Colab evaluation keeps the original types and reports detection results
+for each, using all labelled images in the selected split. Sharpness has a
+2×2 confusion matrix; exposure has a 3×3 matrix. The app does not identify
+whether blur is slight, motion, or defocus. Group IDs identify clusters rather
+than image classes; grouping is evaluated by pairwise membership and ARI.
+Dataset sizes describe the experiment, not upload requirements or limits.
+
 Runtime settings come only from `backend/config/best_parameters.json`.
 They are validated at backend startup. Restart the backend after replacing the
 JSON. Development evaluation scores in that file are provenance, not inference
@@ -256,6 +272,15 @@ data/                     Historical mock fixtures
 ```
 
 The existing layout and native system font stack are retained.
+
+## Colab presentation and folder experiment
+
+`colab/presentation_results.ipynb` explains the current app flow in execution
+order and lets you choose an image folder to show images, scores, light status
+and short recommendations using ordinary notebook output. It includes a snapshot
+of the app parameters, optional Ground Truth evaluation and parameter experiments.
+Copy the `colab/` folder to Drive and follow `colab/README.md`. The app's runtime
+code and parameters remain independent of notebook experiments.
 
 ## Checks
 

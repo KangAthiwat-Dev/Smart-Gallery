@@ -2,11 +2,19 @@
 
 Run from this directory:
 
+<!-- MacOS -->
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+<!-- WindowOS -->
+```bash
+cd backend
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 - Health: http://127.0.0.1:8000/health
@@ -75,6 +83,16 @@ timestamp pool. Time matches are labelled `exif_time` (no Hamming distance),
 beyond-window comparisons `timed_phash`, and untimed comparisons `phash`.
 Pair decisions are not final membership.
 Timestamp extraction also reads the nested Exif IFD used by phone/camera files.
+
+`sharpnessLabel` predicts `sharp` or `blur`. The experimental dataset has four
+types (Sharp, Slight Blur, Motion Blur, Defocus Blur; 30 images each); the three
+blur types all map to `blur` during evaluation. The classifier does not predict
+blur subtypes. `exposureLabel` predicts all three dataset classes: `normal`,
+`underexposed`, `overexposed` (30 images each in the experiment).
+`similarityGroup` identifies a predicted cluster, not an image class. The
+similarity dataset has 20 groups of 5; inference discovers groups in each upload
+without requiring that count. See `../colab/` for evaluation by original blur
+type, confusion matrices, pairwise grouping scores and ARI.
 
 The demo adds an optional missing-timestamp fallback beyond the notebook.
 `similarity.missing_exif_policy` controls it:
